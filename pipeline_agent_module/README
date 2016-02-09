@@ -1,0 +1,41 @@
+Dynamic Pipeline-Agent Module:
+1.Packages :
+        pika
+        yaml
+        subprocess
+        logging
+        operator
+        json
+        ConfigParser
+
+ package can be installed using the command:
+  -> pip install pika
+ Remaing packages will come by default with OS package or can be installed
+ using command
+ -> sudo apt-get <package-name>
+
+2.Files:
+a. utils.py: Consists of utility function for parsing and updating pipeline.yaml
+b. pipeline.yaml:Sample pipeline.yaml file with minimum source and sink information tags,
+c. pipeline.py: Does validation of pipeline.yaml configuration.
+d. pipeline_agent.py: Main file of the module while will listen on Rabbitmq exchange "pubsub"
+e. pipeline_agent.conf : Conf file should consist of the following information:
+                       i.Rabbitmq server datails(host,port,username,passwd)
+                       ii.LOGGING info(logging level,file name)
+                       iii.Ceilometer services needed to be restarted after pipeline.yaml changes.
+f. README
+
+3.To run the module:
+  ->sudo python pipeline_agent.py
+
+4.Format to send conf msg to the module:
+  i.For updating conf :
+    -> msg={"sub_info":sub_info,"target":target,"action":"ADD"}
+  ii.for deleting conf :
+    -> msg={"sub_info":sub_info,"target":target,"action":"DEL"}
+
+     The above two msgs should be in json fomrat and should send to same rabbitmq-server where pipeline_agent.py is running
+     with "pubsub"  exchage.
+     ex:
+        sub_info  = ["cpu_util", "memory"]
+        target = "kafka://1.2.3.2:18"
