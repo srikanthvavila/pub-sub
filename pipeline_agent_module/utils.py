@@ -223,6 +223,7 @@ def get_sink_info(meter,sink_name,target):
     return sink_info
 
 def delete_conf_from_pipe_line_cfg(meter,publisher,pipeline_cfg):
+    #import pdb;pdb.set_trace()
    
     sink_name = get_sink_name_from_publisher(publisher,pipeline_cfg)
     source_name = get_source_name_from_meter(meter,pipeline_cfg)
@@ -236,7 +237,7 @@ def delete_conf_from_pipe_line_cfg(meter,publisher,pipeline_cfg):
     temp_meter_list = []
    
     for j in meter_list:
-        temp_meter_list.append(j) 
+        temp_meter_list.append(j)
   
     if delete_meter_from_source(meter,source_name,pipeline_cfg) :
         if len(temp_meter_list) == 1:
@@ -324,12 +325,14 @@ def update_conf_to_pipe_line_cfg(meter,publisher,pipeline_cfg):
              publisher_list=[]
              if len(meter_list) > 1:
                 sink_name = get_sink_name_from_source_name(source_name,pipeline_cfg)
+                '''
                 if type(sink_name) is list :
                     for sinkname in sink_name:    
                         publisher_list.append(get_publisher_list_from_sink(sinkname,pipeline_cfg))
                 else :
                      publisher_list.append(get_publisher_list_from_sink(sink_name,pipeline_cfg))
-
+                ''' 
+                publisher_list = get_publisher_list_from_sink(sink_name,pipeline_cfg)
                 new_source_info,new_sink_name = get_source_info(meter)
                 new_sink_info = get_sink_info(meter,new_sink_name,publisher)
                 for i in publisher_list:
