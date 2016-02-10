@@ -147,6 +147,22 @@ def get_publisher_list_from_sink(sink_name,pipeline_cfg):
     except Exception as e:
         return None
 
+def get_publisher_list_from_sinkname(sink_name,pipeline_cfg):
+    sink_cfg = pipeline_cfg['sinks']
+    ''' Iterating over the list of sinks to build publishers list '''
+    try :
+        for sinks in sink_cfg:
+            pub_list = sinks.get('publishers')
+            try :
+                 if sink_name == sinks.get("name"):
+                     return pub_list   
+            except Exception as e:
+                #print ("Got Exception",e.__str__())
+                continue
+    except Exception as e:
+        return None
+
+
 def delete_meter_from_source(meter_name,source_name,pipeline_cfg) :
     ''' function to delete meter for the given source '''
     source_cfg = pipeline_cfg['sources']
@@ -179,10 +195,11 @@ def delete_publisher_from_sink(publisher,sink_name,pipeline_cfg):
             pub_list = sinks.get('publishers')
             #print pub_list
             try :
-                k = pub_list.index(publisher)
-                pub_list.pop(k)
-                #print k
-                return True 
+                if sink_name == sinks.get("name"):
+                    k = pub_list.index(publisher)
+                    pub_list.pop(k)
+                    #print k
+                    return True 
             except Exception as e:
                 #print ("Got Exception",e.__str__())
                 continue   
@@ -238,6 +255,13 @@ def delete_conf_from_pipe_line_cfg(meter,publisher,pipeline_cfg):
    
     for j in meter_list:
         temp_meter_list.append(j)
+  
+    pub_list = get_publisher_list_from_sinkname(sink_name,pipeline_cfg)
+    if len(pub_list) > 2 and  len(temp_meter_list) == 1:
+        if delete_publisher_from_sink(publisher,sink_name,pipeline_cfg):
+            return True
+        else:
+            return False    
   
     if delete_meter_from_source(meter,source_name,pipeline_cfg) :
         if len(temp_meter_list) == 1:
