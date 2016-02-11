@@ -37,6 +37,11 @@ LEVELS = {'DEBUG': logging.DEBUG,
 
 _DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+''' Stores all the subscribed meter's list '''
+meter_list = []
+''' Stores meter to app-id mapping '''
+meter_dict = {}
+
 @app.route('/subscribe',methods=['POST'])
 def subscribe():
     try :
@@ -44,11 +49,17 @@ def subscribe():
         target = request.json['target']
         sub_info = request.json['sub_info']
 
+        try :
+            validate_sub_info(sub_info)
+        except Exception as e:
+            logging.error("* %s",e.__str__())
+            return e.__str__()
+
         ''' Flag to Update pipeling cfg file '''
         config = ConfigParser.ConfigParser()
         config.read('pub_sub.conf')
         if config.get('RABBITMQ','UpdateConfMgmt') == "True" : 
-            update_pipeline_conf(sub_info,target,"ADD")
+            update_pipeline_conf(sub_info,target,app_id,"ADD")
         else:
             logging.warning("Update Conf Mgmt flag is disabled,enable the flag to  update Conf Mgmt")
 
@@ -114,7 +125,7 @@ def unsubscribe():
             config = ConfigParser.ConfigParser()
             config.read('pub_sub.conf')
             if config.get('RABBITMQ','UpdateConfMgmt') == "True" :
-                update_pipeline_conf(sub_info,target,"DEL")
+                update_pipeline_conf(sub_info,target,app_id,"DEL")
             else:
                 logging.warning("Update Conf Mgmt flag is disabled,enable the flag to  update Conf Mgmt")
             #update_pipeline_conf(sub_info,target,"DEL")
@@ -128,14 +139,137 @@ def unsubscribe():
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
 
-def update_pipeline_conf(sub_info,target,flag):
+def print_subscribed_meter_list():
+    logging.debug("-------------------------------------------------")
+    #print (meter_list)
+    logging.debug("meter_list:%s",meter_list)
+    logging.debug("meter_dict:%s",meter_dict)
+    #print (meter_dict)
+    logging.debug("-------------------------------------------------")
+
+def validate_sub_info(sub_info):
+    if type(sub_info) == list:
+        for meter in sub_info:
+            if meter.startswith("*") or meter.startswith("!"):
+                err_str = "Given meter is not supported:" + meter + "\n"
+                logging.error("* Given meter is not supported:%s",meter)
+                raise Exception (err_str)
+    elif meter.startswith("*") or meter.startswith("!"):
+        err_str = "Given meter is not supported:" + meter + "\n"
+        logging.error("* Given meter is not supported:%s",meter)
+        raise Exception (err_str)
+
+def update_meter_dict(meterinfo,app_id):
+    try :
+         if type(meterinfo) == list:
+             for meter in meterinfo:  
+                 if meter_dict.get(meter) is None:
+                     meter_dict[meter] = [app_id]
+                 elif app_id not in meter_dict.get(meter):
+                     meter_dict.get(meter).append(app_id)
+         else:
+             if meter_dict.get(meterinfo) is None:
+                 meter_dict[meterinfo] = [app_id]
+             elif app_id not in meter_dict.get(meterinfo):
+                 meter_dict.get(meterinfo).append(app_id)
+    except Exception as e:
+         logging.error("* %s",e.__str__())
+
+def check_send_msg_confmgmt_del(sub_info,app_id):
+    temp_sub_info=[]
+    temm_meter_info = None
+    if len(meter_list) == 0:
+        #print("No subscription exists")
+        logging.info("No subscription exists")
+        return False,None
+    if type(sub_info) == list:
+       for meterinfo in sub_info:
+           if meter_dict.get(meterinfo) is None:
+              logging.warning("%s meter doesn't exist in the meter dict",meterinfo)
+              continue 
+           if app_id in meter_dict.get(meterinfo):
+               if len(meter_dict.get(meterinfo)) == 1:
+                   #print "Only single app is subscribing this meter"
+                   logging.info("Only single app is subscribing this meter")
+                   del meter_dict[meterinfo]
+                   temp_sub_info.append(meterinfo)
+                   if meterinfo in meter_list:
+                       meter_list.remove(meterinfo)
+               else:
+                   meter_dict.get(meterinfo).remove(app_id)  
+       return True,temp_sub_info 
+    else :
+         if meter_dict.get(sub_info) is None:
+              logging.warning("%s meter doesn't exist in the meter dict",sub_info)
+              return False,None 
+         if app_id in meter_dict.get(sub_info):
+             if len(meter_dict.get(sub_info)) == 1:
+                  #print "Only single app is subscribing this meter"
+                  logging.info("Only single app is subscribing this meter")
+                  del meter_dict[sub_info]
+                  if sub_info in meter_list:
+                     meter_list.remove(sub_info)
+                  return True,sub_info   
+             else:
+                 meter_dict.get(sub_info).remove(app_id)
+    return False,None 
+     
+def check_send_msg_confmgmt_add(sub_info,app_id):
+    temp_sub_info=[]
+    update_meter_dict(sub_info,app_id)
+    #import pdb;pdb.set_trace()
+    if len(meter_list) == 0:
+        logging.info("No subinfo exits")
+        if type(sub_info) == list:
+            for j in sub_info:
+                meter_list.append(j)
+            return True,sub_info
+        else :
+            meter_list.append(sub_info)
+            return True,sub_info
+    if type(sub_info) == list:
+        for j in sub_info:
+            if j in meter_list:
+                #print ("meter already exists",j)
+                logging.info("meter already exist:%s",j)
+                continue
+            else :
+                 temp_sub_info.append(j)  
+                 meter_list.append(j)
+        if temp_sub_info is not None:
+            return True,temp_sub_info
+        else :
+            return False,None
+    else :
+         if sub_info not in meter_list:         
+             meter_list.append(sub_info)
+             #print ("subscription for  meter doesn't exist",sub_info)
+             logging.warning("subscription for  meter doesn't exist:%s",sub_info)
+             return True,sub_info
+         else :  
+             #print ("subscription already exist for ",sub_info)
+             logging.info("subscription already exist for:%s ",sub_info)
+             return False,sub_info         
+
+def update_pipeline_conf(sub_info,target,app_id,flag):
     logging.debug("* sub_info:%s",sub_info)
     logging.debug("* target:%s",target)
   
     #msg={"sub_info":sub_info,"target":target,"action":flag}
     
     #json_msg=json.dumps(msg)
-    #msg="image"   
+    #msg="image"
+    meter_sub_info = None
+    if flag == "ADD":
+       status,meter_sub_info=check_send_msg_confmgmt_add(sub_info,app_id)
+       if status == False or meter_sub_info == None or meter_sub_info == []:
+           logging.warning("%s is already subscribed with the conf mgmt")
+           return 
+    elif flag == "DEL": 
+       status,meter_sub_info=check_send_msg_confmgmt_del(sub_info,app_id)
+       if status == False or meter_sub_info == None or meter_sub_info == []:
+           logging.warning("%s is already unsubscribed with the conf mgmt")
+           return 
     try :
         config = ConfigParser.ConfigParser()
         config.read('pub_sub.conf')
@@ -145,7 +279,8 @@ def update_pipeline_conf(sub_info,target,flag):
         rabbitmq_port = int ( config.get('RABBITMQ','Rabbitmq_port') )
 
         ceilometer_client_info = config.get('CLIENT','target')
-        msg={"sub_info":sub_info,"target":ceilometer_client_info,"action":flag}
+        #msg={"sub_info":sub_info,"target":ceilometer_client_info,"action":flag}
+        msg={"sub_info":meter_sub_info,"target":ceilometer_client_info,"action":flag}
         #print msg
         json_msg=json.dumps(msg)
 
