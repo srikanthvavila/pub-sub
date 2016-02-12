@@ -2,6 +2,7 @@ import pika
 import yaml
 import subprocess
 import logging
+import logging.config
 import operator
 import json
 import ConfigParser
@@ -24,6 +25,7 @@ class UnsortableOrderedDict(OrderedDict):
 
 tmp_pipeline_conf = "/tmp/pipeline.yaml"
 
+'''
 LEVELS = {'DEBUG': logging.DEBUG,
           'INFO': logging.INFO,
           'WARNING': logging.WARNING,
@@ -31,7 +33,7 @@ LEVELS = {'DEBUG': logging.DEBUG,
           'CRITICAL': logging.CRITICAL}
 
 _DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
+'''
 def get_source_info(meter):
     sink_name = meter + "_sink"
     meter_name = meter+"_name"   
@@ -160,12 +162,15 @@ def msg_queue_listner():
         rabbitmq_passwd = config.get('RABBITMQ','Rabbitmq_passwd')
         rabbitmq_host = config.get('RABBITMQ','Rabbitmq_host')
         rabbitmq_port = int ( config.get('RABBITMQ','Rabbitmq_port') )
+        '''
         log_level    = config.get('LOGGING','level')
         log_file       = config.get('LOGGING','filename')
  
         level = LEVELS.get(log_level, logging.NOTSET)
         logging.basicConfig(filename=log_file,format='%(asctime)s %(filename)s %(levelname)s %(message)s',\
                     datefmt=_DEFAULT_LOG_DATE_FORMAT,level=level)
+        '''
+        logging.config.fileConfig('pipeline_agent.conf', disable_existing_loggers=False)  
     except Exception as e:
         logging.error("* Error in confing file:%s",e.__str__())
     else :

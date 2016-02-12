@@ -6,6 +6,7 @@ import fnmatch
 import operator
 import logging
 import logging.handlers
+import logging.config
 import ConfigParser
 import pika
 import json
@@ -405,7 +406,7 @@ def read_notification_from_ceilometer_over_kafka(parse_target):
 
 def process_ceilometer_message(sample,data):
     logging.debug("%s",sample)
-    logging.info("%s",sample)
+    #logging.info("%s",sample)
     if len(sub_info) < 1:
         #print  "No subscription exists"
         return
@@ -527,18 +528,21 @@ if __name__ == "__main__":
         webserver_port = int (config.get('WEB_SERVER','webserver_port'))
        # client_host    = config.get('CLIENT','client_host')
       #  client_port    = int (config.get('CLIENT','client_port'))
-        ceilometer_client_info = config.get('CLIENT','target')  
+        ceilometer_client_info = config.get('CLIENT','target')
+        '''  
         log_level      = config.get('LOGGING','level')
         log_file       = config.get('LOGGING','filename')
         maxbytes       = int (config.get('LOGGING','maxbytes'))
         backupcount    = int (config.get('LOGGING','backupcount'))
-   
-        level = LEVELS.get(log_level, logging.NOTSET) 
+        level = LEVELS.get(log_level, logging.NOTSET)
+        '''
+        logging.config.fileConfig('pub_sub.conf', disable_existing_loggers=False)
+        ''' 
         logging.basicConfig(filename=log_file,format='%(asctime)s %(levelname)s %(message)s',\
                     datefmt=_DEFAULT_LOG_DATE_FORMAT,level=level)
 
         # create rotating file handler
-        ''' 
+        
         rfh = logging.handlers.RotatingFileHandler(
                  log_file, encoding='utf8', maxBytes=maxbytes,
                  backupCount=backupcount,delay=0)
