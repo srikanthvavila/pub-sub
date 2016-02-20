@@ -8,7 +8,6 @@ import logging
 import logging.handlers
 import logging.config
 import ConfigParser
-import pika
 import json
 from oslo_utils import units
 from oslo_utils import netutils
@@ -43,7 +42,7 @@ meter_list = []
 ''' Stores meter to app-id mapping '''
 meter_dict = {}
 
-@app.route('/subscribe',methods=['POST'])
+@app.route('/subscribe',methods=['POST','SUB'])
 def subscribe():
     try :
         app_id = request.json['app_id']
@@ -112,7 +111,7 @@ def subscribe():
          pass
     return status 
 
-@app.route('/unsubscribe',methods=['POST'])
+@app.route('/unsubscribe',methods=['POST','UNSUB'])
 def unsubscribe():
     try :  
         app_id = request.json['app_id']
@@ -149,16 +148,13 @@ def print_subscribed_meter_list():
     logging.debug("-------------------------------------------------")
 
 def validate_sub_info(sub_info):
-    if type(sub_info) == list:
-        for meter in sub_info:
-            if meter.startswith("*") or meter.startswith("!"):
-                err_str = "Given meter is not supported:" + meter + "\n"
-                logging.error("* Given meter is not supported:%s",meter)
-                raise Exception (err_str)
-    elif meter.startswith("*") or meter.startswith("!"):
-        err_str = "Given meter is not supported:" + meter + "\n"
-        logging.error("* Given meter is not supported:%s",meter)
-        raise Exception (err_str)
+    if type(sub_info) is not list:
+        sub_info = [sub_info]
+    for meter in sub_info:
+        if meter.startswith("*") or meter.startswith("!"):
+            err_str = "Given meter is not supported:" + meter + "\n"
+            logging.error("* Given meter is not supported:%s",meter)
+            raise Exception (err_str)
 
 def update_meter_dict(meterinfo,app_id):
     try :
@@ -253,6 +249,8 @@ def check_send_msg_confmgmt_add(sub_info,app_id):
              return False,sub_info         
 
 def update_pipeline_conf(sub_info,target,app_id,flag):
+    import pika
+
     logging.debug("* sub_info:%s",sub_info)
     logging.debug("* target:%s",target)
   
@@ -392,13 +390,13 @@ def read_notification_from_ceilometer_over_udp(host,port):
         status = process_ceilometer_message(sample,data)
   
 def read_notification_from_ceilometer_over_kafka(parse_target):
-    logging.debug("Kafka target:%s",parse_target)
+    logging.info("Kafka target:%s",parse_target)
     try :
         kafka_publisher=kafka_broker.KafkaBrokerPublisher(parse_target)
         for message in kafka_publisher.kafka_consumer:
             #print message.value
             #logging.debug("%s",message.value)
-            logging.info("%s",message.value)
+            #logging.info("%s",message.value)
             status = process_ceilometer_message(json.loads(message.value),message.value)
             #print status
     except Exception as e:
@@ -555,4 +553,4 @@ if __name__ == "__main__":
     else: 
         #initialize(client_host,client_port)
         initialize(ceilometer_client_info)
-        app.run(host=webserver_host,port=webserver_port,debug=True)
+        app.run(host=webserver_host,port=webserver_port,debug=False)

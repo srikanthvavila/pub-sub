@@ -40,12 +40,21 @@ Subscribe-Publish Frame Work:
 
 6.Running Kafka on the server server where pub-sub module is running:
   i.Download the kafka from:
-     https://www.apache.org/dyn/closer.cgi?path=/kafka/0.9.0.0/kafka_2.11-0.9.0.0.tgz
-  ii.tar -xzf kafka_2.11-0.9.0.0.tgz
-  iii.tar -xzf kafka_2.11-0.9.0.0.tgz
-  iv. Start the zookeeper server:
+     #https://www.apache.org/dyn/closer.cgi?path=/kafka/0.9.0.0/kafka_2.11-0.9.0.0.tgz
+     http://apache.arvixe.com/kafka/0.9.0.0/kafka_2.11-0.9.0.0.tgz
+  ii.install java
+     sudo apt-get update
+     sudo apt-get install default-jre
+  iii. install kafka package
+     sudo easy_install pip
+     sudo pip install kafka-python
+  iv.tar -xzf kafka_2.11-0.9.0.0.tgz
+  v. Start the zookeeper server:
       bin/zookeeper-server-start.sh config/zookeeper.properties
-  v.Start Kafka Server :
+  vi.Start Kafka Server :
       bin/kafka-server-start.sh config/server.properties
- vi. To read messages from kafka on a topic test :
+  vii.To read messages from kafka on a topic test :
      bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic test --from-beginning
+  viii.Before configuring kafka:// publisher in ceilometer:
+     install kafka on both controller node and compute nodes
+     Restart the ceilometer-agent-notification, ceilometer-agent-compute, ceilometer-agent-central daemons
