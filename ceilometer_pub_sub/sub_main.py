@@ -103,6 +103,7 @@ def subscribe():
   
          subscription_info = sub_info
          sub_info_filter = query 
+         logging.info("Creating subscription for app:%s for meters:%s with filters:%s and target:%s",app_id, subscription_info, sub_info_filter, target)
          subscrip_obj=subinfo(scheme,app_id,app_ip,app_port,subscription_info,sub_info_filter,target)
          status = subscrip_obj.update_subinfo()
          subinfo.print_subinfo()
@@ -464,7 +465,7 @@ def process_ceilometer_message(sample,data):
                           logging.deubg("* Not a valid operator ignoring app_id:%s",obj.app_id)
                           l.append(False)
                           logging.info("* Logical and of Query %s",l)
-                     if reduce(operator.and_, l):
+                     if reduce(operator.or_, l):
                          try:
                              if obj.scheme == "udp" :
                                   logging.debug("* Sending data over UDP for host:%s and port:%s",host,port)
