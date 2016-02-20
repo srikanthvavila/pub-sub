@@ -435,8 +435,8 @@ def process_ceilometer_message(sample,data):
                  if obj.sub_info_filter is None:
                      try:
                          if obj.scheme == "udp" :
-                              logging.debug("* Sending data without query over UDP for host:%s and port:%s",host,port)
-                              logging.info("* Sending data without query over UDP for host:%s and port:%s",host,port)
+                              #logging.debug("* Sending data without query over UDP for host:%s and port:%s",host,port)
+                              #logging.info("* Sending data without query over UDP for host:%s and port:%s",host,port)
                               udp = socket.socket(socket.AF_INET, # Internet
                                                    socket.SOCK_DGRAM) # UDP
                               udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
@@ -444,8 +444,8 @@ def process_ceilometer_message(sample,data):
                               #return True
                               continue
                          elif obj.scheme == "kafka" :
-                              logging.debug("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
-                              logging.info("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
+                              #logging.debug("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
+                              #logging.info("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
                               kafka_publisher._send(sample)  
                               #return True
                               continue                                  
@@ -457,39 +457,39 @@ def process_ceilometer_message(sample,data):
                  for i in range(len(obj.sub_info_filter)):
                      if obj.sub_info_filter[i]['op'] in COMPARATORS:
                           op = COMPARATORS[obj.sub_info_filter[i]['op']]
-                          logging.debug("* obj.sub_info_filter[i]['value']:%s",obj.sub_info_filter[i]['value'])
-                          logging.debug("* obj.sub_info_filter[i]['field']:%s",obj.sub_info_filter[i]['field'])
+                          #logging.debug("* obj.sub_info_filter[i]['value']:%s",obj.sub_info_filter[i]['value'])
+                          #logging.debug("* obj.sub_info_filter[i]['field']:%s",obj.sub_info_filter[i]['field'])
                           l.append(op(obj.sub_info_filter[i]['value'],sample[obj.sub_info_filter[i]['field']]))
-                          logging.info("* Logical and of Query %s",l)
+                          #logging.info("* Logical and of Query %s",l)
                      else:
-                          logging.deubg("* Not a valid operator ignoring app_id:%s",obj.app_id)
+                          logging.info("* Not a valid operator ignoring app_id:%s",obj.app_id)
                           l.append(False)
-                          logging.info("* Logical and of Query %s",l)
-                     if reduce(operator.or_, l):
-                         try:
-                             if obj.scheme == "udp" :
-                                  logging.debug("* Sending data over UDP for host:%s and port:%s",host,port)
-                                  udp = socket.socket(socket.AF_INET, # Internet
-                                                       socket.SOCK_DGRAM) # UDP
-                                  udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                                  udp.sendto(data,(host,port))
-                                  #return True
-                                  continue
-                             elif obj.scheme == "kafka" :
-                                  logging.debug("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
-                                  kafka_publisher._send(sample)  
-                                  #return True
-                                  continue                                  
-                         except Exception:
-                             logging.error ("Unable to send sample over UDP/Kafka for %s and %s ",host,port)
-                             ret_str = ("Unable to send sample over UDP/Kafka for %s and %s ")%(host,port)
-                             #return False
-                             continue   
-                     else :
-		           logging.warning("* No Notification found with the given subscription")
-                           continue
+                          #logging.info("* Logical and of Query %s",l)
+                 if reduce(operator.or_, l):
+                     try:
+                         if obj.scheme == "udp" :
+                              logging.debug("* Sending data over UDP for host:%s and port:%s",host,port)
+                              udp = socket.socket(socket.AF_INET, # Internet
+                                                   socket.SOCK_DGRAM) # UDP
+                              udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                              udp.sendto(data,(host,port))
+                              #return True
+                              continue
+                         elif obj.scheme == "kafka" :
+                              logging.debug("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
+                              kafka_publisher._send(sample)  
+                              #return True
+                              continue                                  
+                     except Exception:
+                         logging.error ("Unable to send sample over UDP/Kafka for %s and %s ",host,port)
+                         ret_str = ("Unable to send sample over UDP/Kafka for %s and %s ")%(host,port)
+                         #return False
+                         continue   
+                 else :
+		       logging.debug("* No Notification found with the given subscription")
+                       continue
              else :
-                  logging.warning("* No valid subscrition found for %s",obj.app_id)
+                  logging.debug("* No matching subscrition found for %s",sample['counter_name'])
                   continue
          except Exception as e:
              logging.error("Key_Error:%s ",e.__str__())
