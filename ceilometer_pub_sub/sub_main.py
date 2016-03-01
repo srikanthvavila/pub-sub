@@ -419,6 +419,7 @@ def process_ceilometer_message(sample,data):
              msg_list.append(fnmatch.fnmatch(sample['counter_name'],obj.subscription_info))
          try:
              if reduce(operator.or_, msg_list):
+                 ''' 
                  kafka_publisher = None
                  if obj.scheme == "kafka" :
 		    parse_target=netutils.urlsplit(obj.target)
@@ -428,6 +429,7 @@ def process_ceilometer_message(sample,data):
                         logging.error("* Error in connecting kafka broker:%s",e.__str__())
                        # return False
                         continue 
+                 '''
                  host = obj.ipaddress
                  port = int(obj.portno)
                  l=[]
@@ -437,16 +439,16 @@ def process_ceilometer_message(sample,data):
                          if obj.scheme == "udp" :
                               #logging.debug("* Sending data without query over UDP for host:%s and port:%s",host,port)
                               #logging.info("* Sending data without query over UDP for host:%s and port:%s",host,port)
-                              udp = socket.socket(socket.AF_INET, # Internet
-                                                   socket.SOCK_DGRAM) # UDP
-                              udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
-                              udp.sendto(data,(host,port))
+                              #udp = socket.socket(socket.AF_INET, # Internet
+                              #                     socket.SOCK_DGRAM) # UDP
+                              #udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+                              obj.udp.sendto(data,(host,port))
                               #return True
                               continue
                          elif obj.scheme == "kafka" :
                               #logging.debug("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
                               #logging.info("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
-                              kafka_publisher._send(sample)  
+                              obj.kafka_publisher._send(sample)  
                               #return True
                               continue                                  
                      except Exception as e:
@@ -469,15 +471,15 @@ def process_ceilometer_message(sample,data):
                      try:
                          if obj.scheme == "udp" :
                               logging.debug("* Sending data over UDP for host:%s and port:%s",host,port)
-                              udp = socket.socket(socket.AF_INET, # Internet
-                                                   socket.SOCK_DGRAM) # UDP
-                              udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                              udp.sendto(data,(host,port))
+                              #udp = socket.socket(socket.AF_INET, # Internet
+                              #                    socket.SOCK_DGRAM) # UDP
+                              #udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                              obj.udp.sendto(data,(host,port))
                               #return True
                               continue
                          elif obj.scheme == "kafka" :
-                              logging.debug("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,kafka_publisher.topic)
-                              kafka_publisher._send(sample)  
+                              logging.debug("* Sending data over kafka for host:%s and port:%s and topec:%s",host,port,obj.kafka_publisher.topic)
+                              obj.kafka_publisher._send(sample)  
                               #return True
                               continue                                  
                      except Exception:

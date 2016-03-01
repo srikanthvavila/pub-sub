@@ -1,4 +1,9 @@
 #!/usr/bin/python
+import socket
+from oslo_utils import units
+from oslo_utils import netutils
+import kafka
+import kafka_broker
 import fnmatch
 import logging
 import copy
@@ -13,7 +18,17 @@ class subinfo:
         self.portno = app_port 
         self.subscription_info = subscription_info
         self.sub_info_filter = sub_info_filter
-        self.target = target   
+        self.target = target
+        
+        if scheme == "kafka":
+            ''' Creating kafka publisher to send message over kafka '''
+            parse_target = netutils.urlsplit(target)
+            self.kafka_publisher = kafka_broker.KafkaBrokerPublisher(parse_target)
+        elif scheme == "udp":
+            ''' Creating UDP socket to send message over UDP '''
+            self.udp = socket.socket(socket.AF_INET, # Internet
+                                     socket.SOCK_DGRAM) # UDP
+            self.udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   
 
     def update_subinfo(self):
         logging.info("* inside %s",self.update_subinfo.__name__)
