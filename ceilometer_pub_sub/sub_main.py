@@ -12,8 +12,10 @@ import json
 from oslo_utils import units
 from oslo_utils import netutils
 from pubrecords import *
+import pubsub_database
 import kafka
 import kafka_broker
+import shelve
 
 from flask import request, Request, jsonify
 from flask import Flask
@@ -107,6 +109,11 @@ def subscribe():
          subscrip_obj=subinfo(scheme,app_id,app_ip,app_port,subscription_info,sub_info_filter,target)
          status = subscrip_obj.update_subinfo()
          subinfo.print_subinfo()
+         if config.get('CLIENT','UpdateDatabase') == "True" :
+             database_obj=pubsub_database.database(scheme,app_id,app_ip,app_port,subscription_info,sub_info_filter,target)
+             database_obj.add_to_database()
+         else:
+             logging.warning("Update Database flag is disabled,enable the flag to  update database")
 
     if parse_target.scheme == "file" :
          pass
@@ -120,6 +127,8 @@ def unsubscribe():
         if sub_info is None or target is None:
             err_str = "No subscription exists with app id: " + app_id + "\n"
             logging.error("* No subscription exists with app id:%s ",app_id)
+            ''' the below statement removing from database is temp placed here '''
+            pubsub_database.database.delete_from_database(app_id)
             return err_str 
         else:
             ''' Flag to Update pipeling cfg file '''
@@ -131,6 +140,10 @@ def unsubscribe():
                 logging.warning("Update Conf Mgmt flag is disabled,enable the flag to  update Conf Mgmt")
             #update_pipeline_conf(sub_info,target,"DEL")
             subinfo.delete_subinfo(app_id)
+            if config.get('CLIENT','UpdateDatabase') == "True" :
+                pubsub_database.database.delete_from_database(app_id)
+            else:
+                logging.warning("Update Database flag is disabled,enable the flag to  update database")
     except Exception as e:
          logging.error("* %s",e.__str__())
          return e.__str__()
@@ -499,8 +512,36 @@ def process_ceilometer_message(sample,data):
              #return False
              continue
 
+def  build_subscription_info_from_database():
+     ''' Reading each object from database and creating subinfo object'''
+     config = ConfigParser.ConfigParser()
+     config.read('pub_sub.conf')
+
+     if config.get('CLIENT','UpdateDatabase') == "False" :
+          logging.warning("Update Database flag is disabled,enable the flag to  update database")
+          return
+
+     db = shelve.open('pubsubdb')
+     if len(db) > 0:
+         for info in list(db.keys()):
+             scheme = db[info].scheme
+             app_id = db[info].app_id
+             app_ip = db[info].ipaddress
+             app_port = db[info].portno
+             subscription_info = db[info].subscription_info
+             sub_info_filter = db[info].sub_info_filter
+             target = db[info].target
+             subscrip_obj=subinfo(scheme,app_id,app_ip,app_port,subscription_info,sub_info_filter,target)
+             status = subscrip_obj.update_subinfo()
+             subinfo.print_subinfo()
+     else:
+         logging.info("pub-sub database is empty")
+     db.close()
+
 def initialize(ceilometer_client):
      logging.debug("Ceilometer client info:%s",ceilometer_client)
+     ''' Building subscription info from the database '''
+     build_subscription_info_from_database()
      parse_target=netutils.urlsplit(ceilometer_client)
      if not parse_target.netloc:
         err_str = "Error:Invalid client format"
